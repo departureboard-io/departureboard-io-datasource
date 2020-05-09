@@ -1,0 +1,33 @@
+{
+  "type": "datasource",
+  "name": "departureboard.io-datasource",
+  "id": "departureboard.io-datasource",
+  "backend": true,
+  "executable": "departureboard",
+  "metrics": true,
+  "info": {
+    "description": "The departureboard.io plugin allows you query UK train schedules from the departureboard.io REST API powered by National Rail Enquiries.",
+    "author": {
+      "name": "jdbaldry",
+      "url": "https://api.departureboard.io"
+    },
+    "keywords": ["train", "schedules", "departureboard.io", "national rail"],
+    "logos": {
+      "small": "img/logo.svg",
+      "large": "img/logo.svg"
+    },
+    "links": [
+      {
+        "name": "Website",
+        "url": "https://api.departureboard.io"
+      }
+    ],
+    "screenshots": [],
+    "version": "%VERSION%",
+    "updated": "%TODAY%"
+  },
+  "dependencies": {
+    "grafanaVersion": "6.5.x",
+    "plugins": []
+  }
+}

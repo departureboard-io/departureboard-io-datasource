@@ -1,0 +1,24 @@
+{
+  "name": "departureboard.io-datasource",
+  "version": "0.1.0",
+  "description": "Load data from google sheets",
+  "scripts": {
+    "build": "grafana-toolkit plugin:build",
+    "test": "grafana-toolkit plugin:test",
+    "dev": "grafana-toolkit plugin:dev",
+    "watch": "grafana-toolkit plugin:dev --watch"
+  },
+  "author": "departureboard.io",
+  "devDependencies": {
+    "@grafana/data": "canary",
+    "@grafana/runtime": "canary",
+    "@grafana/toolkit": "^6.7.3",
+    "@grafana/ui": "canary"
+  },
+  "main": "index.js",
+  "license": "none",
+  "private": true,
+  "dependencies": {
+    "@types/lodash": "^4.14.150"
+  }
+}
