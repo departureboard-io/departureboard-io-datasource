@@ -4,6 +4,10 @@ export interface DepartureBoardIOOptions extends DataSourceJsonData {
   apiEndpoint: string;
 }
 
+export const defaultOptions: DepartureBoardIOOptions = {
+  apiEndpoint: 'https://api.departureboard.io/api/v2.0',
+};
+
 export interface DepartureBoardIOSecureJSONData {
   apiKey: string;
 }

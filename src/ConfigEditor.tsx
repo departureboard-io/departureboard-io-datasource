@@ -1,7 +1,7 @@
 import React, { ChangeEvent, PureComponent } from 'react';
 import { LegacyForms } from '@grafana/ui';
 import { DataSourcePluginOptionsEditorProps } from '@grafana/data';
-import { DepartureBoardIOOptions, DepartureBoardIOSecureJSONData } from './types';
+import { DepartureBoardIOOptions, DepartureBoardIOSecureJSONData, defaultOptions } from './types';
 
 const { SecretFormField, FormField } = LegacyForms;
 
@@ -45,6 +45,15 @@ export class ConfigEditor extends PureComponent<Props, State> {
     });
   };
 
+  componentDidMount = () => {
+    const { onOptionsChange, options } = this.props;
+    const jsonData = {
+      ...options.jsonData,
+      apiEndpoint: defaultOptions.apiEndpoint,
+    };
+    onOptionsChange({ ...options, jsonData });
+  };
+
   render() {
     const { options } = this.props;
     const { jsonData, secureJsonFields } = options;
@@ -56,10 +65,10 @@ export class ConfigEditor extends PureComponent<Props, State> {
           <FormField
             label="API Endpoint"
             labelWidth={10}
-            inputWidth={19}
+            inputWidth={20}
             onChange={this.onAPIEndpointChange}
-            value={jsonData.apiEndpoint}
-            placeholder="https://api.departureboard.io/api/v2.0"
+            value={jsonData.apiEndpoint || ''}
+            placeholder="departureboard.io API URL"
           />
         </div>
 

@@ -2,7 +2,8 @@
 
 A Grafana datasource plugin to visualize the easy to use departureboard.io RESTful API for live information on train services across England, Scotland and Wales. Powered by National Rail Enquiries.
 
-Currently in alpha. The implementation and user facing query configuration is subject to change.
+> Currently in alpha. The implementation and user facing query configuration is subject to change.
+> Only developed and tested with Grafana 7.X.
 
 ## Features
 
@@ -39,11 +40,10 @@ $ mage stop
 
 ## To do
 
-- Add Logo
 - Document datasource usage
 - Support other endpoints
 - Support more query parameters
 - Support time ranges
 - Understand Grafana SDK
 - Provision dashboard JSON
-- Understand what is required to publish datasources with Grafana
+- Publish datasource
