@@ -16,7 +16,7 @@
     "@grafana/ui": "canary"
   },
   "main": "index.js",
-  "license": "none",
+  "license": "Apache-2.0",
   "private": true,
   "dependencies": {
     "@types/lodash": "^4.14.150"
