@@ -23,7 +23,7 @@ func Start() error {
 	if err != nil {
 		return err
 	}
-	if err := sh.RunV("podman", "run", "-d", "-p", "3000:3000", "-e", "GF_DATAPROXY_LOGGING=true", "-e", "GF_LOG_LEVEL=debug", "-v", cwd+"/custom.ini:/etc/grafana/grafana.ini", "-v", cwd+"/dist:/var/lib/grafana/plugins/departureboard.io-datasource", "--name=grafana", "grafana/grafana:7.0.0-beta1"); err != nil {
+	if err := sh.RunV("podman", "run", "-d", "-p", "3000:3000", "-e", "GF_DATAPROXY_LOGGING=true", "-e", "GF_LOG_LEVEL=debug", "-v", cwd+"/custom.ini:/etc/grafana/grafana.ini", "-v", cwd+"/dist:/var/lib/grafana/plugins/departureboard.io-datasource", "--name=grafana", "grafana/grafana:7.0.0-beta3"); err != nil {
 		return err
 	}
 	return sh.RunV("touch", "started")
