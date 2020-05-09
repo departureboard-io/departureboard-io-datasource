@@ -57,7 +57,9 @@ func (ds *DepatureBoardIODataSource) CheckHealth(ctx context.Context, req *backe
 	}
 
 	url := settings.APIEndpoint + "/getDeparturesByCRS/PAD?apikey=" + settings.APIKey
-	response, err := ds.client.Get(url)
+	httpReq, err := http.NewRequest("GET", url, nil)
+	httpReq.Header.Add("X-API-Consumer", "DBIO-GRAFANA-PLUGIN")
+	response, err := ds.client.Do(httpReq)
 	if err != nil {
 		res.Status = backend.HealthStatusError
 		res.Message = "Error making request to server"
@@ -92,7 +94,9 @@ func (ds *DepatureBoardIODataSource) QueryData(ctx context.Context, req *backend
 			backend.Logger.Error("Query failed", "model", spew.Sdump(model))
 		}
 		url := settings.APIEndpoint + "/getDeparturesByCRS/" + model.StationCRS + "?apikey=" + settings.APIKey
-		response, err := ds.client.Get(url)
+		httpReq, err := http.NewRequest("GET", url, nil)
+		httpReq.Header.Add("X-API-Consumer", "DBIO-GRAFANA-PLUGIN")
+		response, err := ds.client.Do(httpReq)
 		if err != nil {
 			backend.Logger.Error("Query failed", "url", url)
 		}
