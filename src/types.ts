@@ -13,10 +13,13 @@ export interface DepartureBoardIOSecureJSONData {
 }
 
 export interface DepartureBoardIOQuery extends DataQuery {
-  endpoint?: string;
   stationCRS?: string;
+  departures?: boolean;
+  arrivals?: boolean;
 }
 
 export const defaultQuery: Partial<DepartureBoardIOQuery> = {
-  endpoint: 'getDeparturesByCRS',
+  queryType: 'advanced',
+  departures: true,
+  arrivals: false,
 };

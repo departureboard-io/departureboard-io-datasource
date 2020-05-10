@@ -1,4 +1,4 @@
-module departureboard.io/grafana-datasource
+module github.com/departureboard-io/departureboard-io-datasource
 
 go 1.14
 

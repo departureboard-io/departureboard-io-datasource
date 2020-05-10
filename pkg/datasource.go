@@ -3,10 +3,12 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"io/ioutil"
+	"errors"
 	"net/http"
+	"net/url"
 
 	"github.com/davecgh/go-spew/spew"
+	"github.com/departureboard-io/departureboard-io-datasource/pkg/departureboardio"
 	"github.com/grafana/grafana-plugin-sdk-go/backend"
 	"github.com/grafana/grafana-plugin-sdk-go/data"
 	"github.com/prometheus/client_golang/prometheus"
@@ -16,7 +18,14 @@ const metricNamespace = "departureboard_io_datasource"
 
 // DepatureBoardIODataSource handler for departureboard.io API.
 type DepatureBoardIODataSource struct {
-	client http.Client
+	DepartureBoardIOClient *departureboardio.Client
+}
+
+// DepartureBoardIOQuery models the query we get from the frontend.
+type DepartureBoardIOQuery struct {
+	StationCRS string `json:"stationCRS"`
+	Arrivals   bool   `json:"arrivals"`
+	Departures bool   `json:"departures"`
 }
 
 // NewDataSource creates the departureboard.io datasource
@@ -31,7 +40,9 @@ func NewDataSource(mux *http.ServeMux) *DepatureBoardIODataSource {
 	)
 
 	ds := &DepatureBoardIODataSource{
-		client: http.Client{},
+		DepartureBoardIOClient: &departureboardio.Client{
+			Client: http.Client{},
+		},
 	}
 
 	prometheus.MustRegister(queriesTotal)
@@ -56,20 +67,19 @@ func (ds *DepatureBoardIODataSource) CheckHealth(ctx context.Context, req *backe
 		return res, nil
 	}
 
-	url := settings.APIEndpoint + "/getDeparturesByCRS/PAD?apikey=" + settings.APIKey
-	httpReq, err := http.NewRequest("GET", url, nil)
-	httpReq.Header.Add("X-API-Consumer", "DBIO-GRAFANA-PLUGIN")
-	response, err := ds.client.Do(httpReq)
+	apiEndpoint, err := url.Parse(settings.APIEndpoint)
+	if err != nil {
+		res.Status = backend.HealthStatusError
+		res.Message = "Invalid API endpoint"
+	}
+
+	ds.DepartureBoardIOClient.APIEndpoint = *apiEndpoint
+	ds.DepartureBoardIOClient.APIKey = settings.APIKey
+
+	ds.DepartureBoardIOClient.GetDeparturesByCRS("PAD", departureboardio.NewDefaultBoardOptions())
 	if err != nil {
 		res.Status = backend.HealthStatusError
 		res.Message = "Error making request to server"
-		return res, nil
-	}
-
-	if response.StatusCode != http.StatusOK {
-		backend.Logger.Error("Query failed", "url", url)
-		res.Status = backend.HealthStatusError
-		res.Message = "Invalid response from server"
 		return res, nil
 	}
 
@@ -81,54 +91,97 @@ func (ds *DepatureBoardIODataSource) CheckHealth(ctx context.Context, req *backe
 // QueryData queries for data.
 func (ds *DepatureBoardIODataSource) QueryData(ctx context.Context, req *backend.QueryDataRequest) (*backend.QueryDataResponse, error) {
 	res := backend.NewQueryDataResponse()
-	settings, err := LoadSettings(req.PluginContext)
-	if err != nil {
-		return nil, err
+
+	if ds.DepartureBoardIOClient.APIKey == "" {
+		settings, err := LoadSettings(req.PluginContext)
+		if err != nil {
+			return res, errors.New("Unable to load datasource configuration")
+		}
+
+		apiEndpoint, err := url.Parse(settings.APIEndpoint)
+		if err != nil {
+			return res, errors.New("Unable to load datasource configuration")
+		}
+
+		ds.DepartureBoardIOClient.APIEndpoint = *apiEndpoint
+		ds.DepartureBoardIOClient.APIKey = settings.APIKey
 	}
 
 	for _, q := range req.Queries {
 		dr := backend.DataResponse{}
-		model := &DeparturesByCRSQueryModel{}
-		err = json.Unmarshal(q.JSON, model)
-		if err != nil {
+		model := &DepartureBoardIOQuery{}
+		if err := json.Unmarshal(q.JSON, model); err != nil {
 			backend.Logger.Error("Query failed", "model", spew.Sdump(model))
 		}
-		url := settings.APIEndpoint + "/getDeparturesByCRS/" + model.StationCRS + "?apikey=" + settings.APIKey
-		httpReq, err := http.NewRequest("GET", url, nil)
-		httpReq.Header.Add("X-API-Consumer", "DBIO-GRAFANA-PLUGIN")
-		response, err := ds.client.Do(httpReq)
-		if err != nil {
-			backend.Logger.Error("Query failed", "url", url)
+
+		boardOptions := departureboardio.NewDefaultBoardOptions()
+		// TODO: is returning multiple frames okay?
+		if model.Departures {
+			board, err := ds.DepartureBoardIOClient.GetDeparturesByCRS(model.StationCRS, boardOptions)
+			if err != nil {
+				dr.Error = err
+				return res, nil
+			}
+			frame, err := translateDepartureBoardToFrame(model.StationCRS+"Departures", board)
+			if err != nil {
+				dr.Error = err
+				return res, nil
+			}
+			dr.Frames = append(dr.Frames, frame)
 		}
 
-		if response.StatusCode != http.StatusOK {
-			backend.Logger.Error("Query failed", "url", url)
+		if model.Arrivals {
+			board, err := ds.DepartureBoardIOClient.GetArrivalsByCRS(model.StationCRS, boardOptions)
+			if err != nil {
+				dr.Error = err
+				return res, nil
+			}
+			frame, err := translateArrivalBoardToFrame(model.StationCRS+"Arrivals", board)
+			if err != nil {
+				dr.Error = err
+				return res, nil
+			}
+			dr.Frames = append(dr.Frames, frame)
 		}
-
-		body, err := ioutil.ReadAll(response.Body)
-		if err != nil {
-			backend.Logger.Error("Query failed", "url", url)
-		}
-
-		board := Board{}
-		json.Unmarshal(body, &board)
-		var destinations, platforms, std, etd []string
-		for _, service := range board.TrainServices {
-			std = append(std, service.STD)
-			etd = append(etd, service.ETD)
-			destinations = append(destinations, service.Destination[0].LocationName)
-			platforms = append(platforms, service.Platform)
-		}
-		frame := data.NewFrame(model.StationCRS,
-			data.NewField("Scheduled", data.Labels{}, std),
-			data.NewField("Estimated", data.Labels{}, etd),
-			data.NewField("Destination", data.Labels{}, destinations),
-			data.NewField("Platform", data.Labels{}, platforms),
-		)
-		dr.Frames = append(dr.Frames, frame)
 
 		res.Responses[q.RefID] = dr
 	}
 
 	return res, nil
+}
+
+// translateDepartureBoardToFrame converts a departure board to a data frame.
+// TODO: Make a generic board to frame translation.
+func translateDepartureBoardToFrame(name string, board *departureboardio.Board) (*data.Frame, error) {
+	var destinations, platforms, std, etd []string
+	for _, service := range board.TrainServices {
+		std = append(std, service.STD)
+		etd = append(etd, service.ETD)
+		destinations = append(destinations, service.Destination[0].LocationName)
+		platforms = append(platforms, service.Platform)
+	}
+	return data.NewFrame(name,
+		data.NewField("Scheduled", data.Labels{}, std),
+		data.NewField("Estimated", data.Labels{}, etd),
+		data.NewField("Destination", data.Labels{}, destinations),
+		data.NewField("Platform", data.Labels{}, platforms),
+	), nil
+}
+
+// translateArrivalBoardToFrame converts a departure board to a data frame.
+// TODO: Make a generic board to frame translation.
+func translateArrivalBoardToFrame(name string, board *departureboardio.Board) (*data.Frame, error) {
+	var origins, platforms, sta, eta []string
+	for _, service := range board.TrainServices {
+		sta = append(sta, service.STA)
+		eta = append(eta, service.ETA)
+		origins = append(origins, service.Origin[0].LocationName)
+		platforms = append(platforms, service.Platform)
+	}
+	return data.NewFrame(name,
+		data.NewField("Scheduled", data.Labels{}, sta),
+		data.NewField("Estimated", data.Labels{}, eta),
+		data.NewField("Origin", data.Labels{}, origins),
+		data.NewField("Platform", data.Labels{}, platforms),
+	), nil
 }
