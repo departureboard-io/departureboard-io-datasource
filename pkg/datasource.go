@@ -4,9 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"math"
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/departureboard-io/departureboard-io-datasource/pkg/departureboardio"
@@ -124,6 +126,13 @@ func (ds *DepatureBoardIODataSource) QueryData(ctx context.Context, req *backend
 		if model.FilterCRS != "" {
 			boardOptions.FilterStation = &model.FilterCRS
 		}
+		timeWindow, timeOffset, err := translateTimeRangeToTimeWindowAndOffset(time.Now(), q.TimeRange)
+		if err != nil {
+			dr.Error = err
+			return res, nil
+		}
+		boardOptions.TimeWindow = timeWindow
+		boardOptions.TimeOffset = timeOffset
 
 		// TODO: is returning multiple frames okay?
 		if model.Departures {
@@ -176,6 +185,20 @@ func (ds *DepatureBoardIODataSource) QueryData(ctx context.Context, req *backend
 	}
 
 	return res, nil
+}
+
+// translateTimeRangeToTimeWindowAndOffset takes the Grafana query time range and translates it to an equivalent representation
+// that can be used in a departureboard.io query.
+func translateTimeRangeToTimeWindowAndOffset(currentTime time.Time, timeRange backend.TimeRange) (timeWindow, timeOffset int, err error) {
+	// Tolerance for clock skew and time between frontend request and backend processing.
+	const timeDelta = time.Minute
+
+	if diff := currentTime.Sub(timeRange.To); diff >= 0-timeDelta {
+		return timeOffset, timeWindow, errors.New("NationalRail do not provide historical data")
+	}
+	timeOffset = int(timeRange.From.Sub(currentTime).Minutes())
+	timeWindow = int(math.Abs(timeRange.To.Sub(timeRange.From).Minutes()))
+	return timeWindow, timeOffset, nil
 }
 
 func translateDepartureBoardToFrameWithServiceDetails(name string, board *departureboardio.Board) (*data.Frame, error) {
