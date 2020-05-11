@@ -20,31 +20,44 @@ export class QueryEditor extends PureComponent<Props> {
     onRunQuery();
   };
 
-  onStationCRSChange = (event: ChangeEvent<HTMLInputElement>) => {
+  onFormFieldChange = (event: ChangeEvent<HTMLInputElement>) => {
     const { onChange, query, onRunQuery } = this.props;
-    onChange({ ...query, stationCRS: event.target.value });
+    onChange({ ...query, [event.target.name]: event.target.value });
     onRunQuery();
   };
 
   render() {
     const query = defaults(this.props.query, defaultQuery);
-    const { arrivals, departures, serviceDetails, stationCRS } = query;
+    const { arrivals, departures, filterCRS, serviceDetails, stationCRS } = query;
 
     return (
       <div className="gf-form-group">
         <div className="gf-form">
           <FormField
+            name="stationCRS"
+            label="CRS code for station"
             labelWidth={10}
             value={stationCRS || ''}
-            onChange={this.onStationCRSChange}
+            onChange={this.onFormFieldChange}
             placeholder="PAD"
-            label="CRS code for station"
-            tooltip=""
+          />
+          <FormField
+            name="filterCRS"
+            label="CRS code for filter station"
+            labelWidth={15}
+            value={filterCRS || ''}
+            onChange={this.onFormFieldChange}
+            placeholder="HAY"
+            tooltip="Will only show services that include the filter station as the origin or destination."
           />
         </div>
         <div className="gf-form">
           <Checkbox name="serviceDetails" label="Include service details?" width={20} value={serviceDetails} onChange={this.onCheckboxChange} />
+        </div>
+        <div className="gf-form">
           <Checkbox name="departures" label="Include departures?" width={20} value={departures} onChange={this.onCheckboxChange} />
+        </div>
+        <div className="gf-form">
           <Checkbox name="arrivals" label="Include arrivals?" width={20} value={arrivals} onChange={this.onCheckboxChange} />
         </div>
       </div>

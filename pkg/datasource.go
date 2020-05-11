@@ -27,6 +27,7 @@ type DepartureBoardIOQuery struct {
 	StationCRS     string `json:"stationCRS"`
 	Arrivals       bool   `json:"arrivals"`
 	Departures     bool   `json:"departures"`
+	FilterCRS      string `json:"filterCRS"`
 	ServiceDetails bool   `json:"serviceDetails"`
 }
 
@@ -120,6 +121,10 @@ func (ds *DepatureBoardIODataSource) QueryData(ctx context.Context, req *backend
 		if model.ServiceDetails {
 			boardOptions.ServiceDetails = true
 		}
+		if model.FilterCRS != "" {
+			boardOptions.FilterStation = &model.FilterCRS
+		}
+
 		// TODO: is returning multiple frames okay?
 		if model.Departures {
 			board, err := ds.DepartureBoardIOClient.GetDeparturesByCRS(model.StationCRS, boardOptions)

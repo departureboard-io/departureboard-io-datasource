@@ -17,6 +17,7 @@ export interface DepartureBoardIOQuery extends DataQuery {
   departures?: boolean;
   arrivals?: boolean;
   serviceDetails?: boolean;
+  filterCRS?: string;
 }
 
 export const defaultQuery: Partial<DepartureBoardIOQuery> = {
