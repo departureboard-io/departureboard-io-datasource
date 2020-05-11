@@ -7,7 +7,7 @@ A Grafana datasource plugin to visualize the easy to use departureboard.io RESTf
 
 ## Features
 
-- Query a station departure board by its CRS code.
+- Query arrival and departure boards for a station by its CRS code.
   ![CBG departure board](img/dashboard.png)
 
 ## Development

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net/http"
 	"net/url"
+	"strings"
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/departureboard-io/departureboard-io-datasource/pkg/departureboardio"
@@ -23,9 +24,10 @@ type DepatureBoardIODataSource struct {
 
 // DepartureBoardIOQuery models the query we get from the frontend.
 type DepartureBoardIOQuery struct {
-	StationCRS string `json:"stationCRS"`
-	Arrivals   bool   `json:"arrivals"`
-	Departures bool   `json:"departures"`
+	StationCRS     string `json:"stationCRS"`
+	Arrivals       bool   `json:"arrivals"`
+	Departures     bool   `json:"departures"`
+	ServiceDetails bool   `json:"serviceDetails"`
 }
 
 // NewDataSource creates the departureboard.io datasource
@@ -115,6 +117,9 @@ func (ds *DepatureBoardIODataSource) QueryData(ctx context.Context, req *backend
 		}
 
 		boardOptions := departureboardio.NewDefaultBoardOptions()
+		if model.ServiceDetails {
+			boardOptions.ServiceDetails = true
+		}
 		// TODO: is returning multiple frames okay?
 		if model.Departures {
 			board, err := ds.DepartureBoardIOClient.GetDeparturesByCRS(model.StationCRS, boardOptions)
@@ -122,24 +127,42 @@ func (ds *DepatureBoardIODataSource) QueryData(ctx context.Context, req *backend
 				dr.Error = err
 				return res, nil
 			}
-			frame, err := translateDepartureBoardToFrame(model.StationCRS+"Departures", board)
-			if err != nil {
-				dr.Error = err
-				return res, nil
+			frame := &data.Frame{}
+			if model.ServiceDetails {
+				frame, err = translateDepartureBoardToFrameWithServiceDetails(model.StationCRS+"Departures", board)
+				if err != nil {
+					dr.Error = err
+					return res, nil
+				}
+			} else {
+				frame, err = translateDepartureBoardToFrame(model.StationCRS+"Departures", board)
+				if err != nil {
+					dr.Error = err
+					return res, nil
+				}
 			}
 			dr.Frames = append(dr.Frames, frame)
 		}
 
 		if model.Arrivals {
+			frame := &data.Frame{}
 			board, err := ds.DepartureBoardIOClient.GetArrivalsByCRS(model.StationCRS, boardOptions)
 			if err != nil {
 				dr.Error = err
 				return res, nil
 			}
-			frame, err := translateArrivalBoardToFrame(model.StationCRS+"Arrivals", board)
-			if err != nil {
-				dr.Error = err
-				return res, nil
+			if model.ServiceDetails {
+				frame, err = translateArrivalBoardToFrameWithServiceDetails(model.StationCRS+"Arrivals", board)
+				if err != nil {
+					dr.Error = err
+					return res, nil
+				}
+			} else {
+				frame, err = translateArrivalBoardToFrame(model.StationCRS+"Arrivals", board)
+				if err != nil {
+					dr.Error = err
+					return res, nil
+				}
 			}
 			dr.Frames = append(dr.Frames, frame)
 		}
@@ -148,6 +171,36 @@ func (ds *DepatureBoardIODataSource) QueryData(ctx context.Context, req *backend
 	}
 
 	return res, nil
+}
+
+func translateDepartureBoardToFrameWithServiceDetails(name string, board *departureboardio.Board) (*data.Frame, error) {
+	var destinations, platforms, std, etd, serviceDetails []string
+	for _, service := range board.TrainServices {
+		std = append(std, service.STD)
+		etd = append(etd, service.ETD)
+		destinations = append(destinations, service.Destination[0].LocationName)
+		platforms = append(platforms, service.Platform)
+		callingPoints := []string{}
+		// TODO: this doesn't handle a train splitting.
+		if len(service.SubsequentCallingPointsList) == 1 {
+			for _, cp := range service.SubsequentCallingPointsList[0].SubsequentCallingPoints {
+				callingPoints = append(callingPoints, cp.LocationName)
+			}
+		}
+		if len(callingPoints) == 0 {
+			serviceDetails = append(serviceDetails, "none")
+		} else {
+			serviceDetails = append(serviceDetails, strings.Join(callingPoints, ", "))
+		}
+
+	}
+	return data.NewFrame(name,
+		data.NewField("Scheduled", data.Labels{}, std),
+		data.NewField("Estimated", data.Labels{}, etd),
+		data.NewField("Destination", data.Labels{}, destinations),
+		data.NewField("Platform", data.Labels{}, platforms),
+		data.NewField("Service Details", data.Labels{}, serviceDetails),
+	), nil
 }
 
 // translateDepartureBoardToFrame converts a departure board to a data frame.
@@ -183,5 +236,35 @@ func translateArrivalBoardToFrame(name string, board *departureboardio.Board) (*
 		data.NewField("Estimated", data.Labels{}, eta),
 		data.NewField("Origin", data.Labels{}, origins),
 		data.NewField("Platform", data.Labels{}, platforms),
+	), nil
+}
+
+func translateArrivalBoardToFrameWithServiceDetails(name string, board *departureboardio.Board) (*data.Frame, error) {
+	var origins, platforms, sta, eta, serviceDetails []string
+	for _, service := range board.TrainServices {
+		sta = append(sta, service.STA)
+		eta = append(eta, service.ETA)
+		origins = append(origins, service.Origin[0].LocationName)
+		platforms = append(platforms, service.Platform)
+
+		callingPoints := []string{}
+		if len(service.PreviousCallingPointsList) == 1 {
+			for _, cp := range service.PreviousCallingPointsList[0].PreviousCallingPoints {
+				callingPoints = append(callingPoints, cp.LocationName)
+			}
+		}
+
+		if len(callingPoints) == 0 {
+			serviceDetails = append(serviceDetails, "none")
+		} else {
+			serviceDetails = append(serviceDetails, strings.Join(callingPoints, ", "))
+		}
+	}
+	return data.NewFrame(name,
+		data.NewField("Scheduled", data.Labels{}, sta),
+		data.NewField("Estimated", data.Labels{}, eta),
+		data.NewField("Origin", data.Labels{}, origins),
+		data.NewField("Platform", data.Labels{}, platforms),
+		data.NewField("Service Details", data.Labels{}, serviceDetails),
 	), nil
 }

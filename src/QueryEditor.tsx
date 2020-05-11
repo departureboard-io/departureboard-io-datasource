@@ -2,7 +2,7 @@ import defaults from 'lodash/defaults';
 
 import React, { ChangeEvent, PureComponent } from 'react';
 import { LegacyForms, Checkbox } from '@grafana/ui';
-import { QueryEditorProps, SelectableValue } from '@grafana/data';
+import { QueryEditorProps } from '@grafana/data';
 import { DataSource } from './DataSource';
 import { defaultQuery, DepartureBoardIOOptions, DepartureBoardIOQuery } from './types';
 
@@ -14,15 +14,9 @@ export class QueryEditor extends PureComponent<Props> {
   constructor(props: Props) {
     super(props);
   }
-  onArrivalsChange = (event: ChangeEvent<HTMLInputElement>) => {
+  onCheckboxChange = (event: ChangeEvent<HTMLInputElement>) => {
     const { onChange, query, onRunQuery } = this.props;
-    onChange({ ...query, arrivals: event.target.checked });
-    onRunQuery();
-  };
-
-  onDeparturesChange = (event: ChangeEvent<HTMLInputElement>) => {
-    const { onChange, query, onRunQuery } = this.props;
-    onChange({ ...query, departures: event.target.checked });
+    onChange({ ...query, [event.target.name]: event.target.checked });
     onRunQuery();
   };
 
@@ -32,14 +26,9 @@ export class QueryEditor extends PureComponent<Props> {
     onRunQuery();
   };
 
-  onQueryTypeChange = (selected: SelectableValue<string>) => {
-    const { onChange, query } = this.props;
-    onChange({ ...query, queryType: selected.value });
-  };
-
   render() {
     const query = defaults(this.props.query, defaultQuery);
-    const { arrivals, departures, stationCRS } = query;
+    const { arrivals, departures, serviceDetails, stationCRS } = query;
 
     return (
       <div className="gf-form-group">
@@ -54,10 +43,9 @@ export class QueryEditor extends PureComponent<Props> {
           />
         </div>
         <div className="gf-form">
-          <Checkbox label="Include departures?" width={20} value={departures} onChange={this.onDeparturesChange} />
-        </div>
-        <div className="gf-form">
-          <Checkbox label="Include arrivals?" width={20} value={arrivals} onChange={this.onArrivalsChange} />
+          <Checkbox name="serviceDetails" label="Include service details?" width={20} value={serviceDetails} onChange={this.onCheckboxChange} />
+          <Checkbox name="departures" label="Include departures?" width={20} value={departures} onChange={this.onCheckboxChange} />
+          <Checkbox name="arrivals" label="Include arrivals?" width={20} value={arrivals} onChange={this.onCheckboxChange} />
         </div>
       </div>
     );
