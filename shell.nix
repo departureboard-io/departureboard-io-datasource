@@ -1,6 +1,7 @@
 let
   sources = import ./nix/sources.nix;
   pkgs = import sources.nixpkgs { };
+  unstable = import sources.nixpkgs_unstable { };
 in pkgs.mkShell {
   buildInputs = [
     # Dependencies for running grafana-server in a rootless container.
@@ -12,7 +13,7 @@ in pkgs.mkShell {
 
     # Developer tooling.
     pkgs.go
-    pkgs.golangci-lint
+    unstable.golangci-lint # use unstable to get version of golangci-lint that works with go 1.14
     pkgs.gotools
     pkgs.mage
     pkgs.nodejs-12_x

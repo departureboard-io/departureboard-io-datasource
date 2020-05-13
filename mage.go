@@ -3,6 +3,7 @@
 package main
 
 import (
+	"errors"
 	"os"
 
 	"github.com/magefile/mage/mg"
@@ -51,6 +52,12 @@ func Restart() error {
 	return sh.RunV("touch", "started")
 }
 
+func TestE2E() error {
+	if _, ok := os.LookupEnv("NATIONALRAIL_API_KEY"); !ok {
+		return errors.New("e2e tests require the NATIONALRAIL_API_KEY environment variable to be set")
+	}
+	return sh.RunV("go", "test", "-tags=e2e", "./...")
+}
 func Build() error {
 	changed, err := target.Dir("dist", "src", "pkg")
 	if !(os.IsNotExist(err) || (err == nil && changed)) {
