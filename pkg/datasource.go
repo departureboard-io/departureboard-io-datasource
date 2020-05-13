@@ -81,8 +81,7 @@ func (ds *DepatureBoardIODataSource) CheckHealth(ctx context.Context, req *backe
 	ds.DepartureBoardIOClient.APIEndpoint = *apiEndpoint
 	ds.DepartureBoardIOClient.APIKey = settings.APIKey
 
-	ds.DepartureBoardIOClient.GetDeparturesByCRS("PAD", departureboardio.NewDefaultBoardOptions())
-	if err != nil {
+	if _, err := ds.DepartureBoardIOClient.GetDeparturesByCRS("PAD", departureboardio.NewDefaultBoardOptions()); err != nil {
 		res.Status = backend.HealthStatusError
 		res.Message = "Error making request to server"
 		return res, nil
@@ -134,6 +133,7 @@ func (ds *DepatureBoardIODataSource) QueryData(ctx context.Context, req *backend
 		boardOptions.TimeWindow = timeWindow
 		boardOptions.TimeOffset = timeOffset
 
+		var frame *data.Frame
 		// TODO: is returning multiple frames okay?
 		if model.Departures {
 			board, err := ds.DepartureBoardIOClient.GetDeparturesByCRS(model.StationCRS, boardOptions)
@@ -141,7 +141,6 @@ func (ds *DepatureBoardIODataSource) QueryData(ctx context.Context, req *backend
 				dr.Error = err
 				return res, nil
 			}
-			frame := &data.Frame{}
 			if model.ServiceDetails {
 				frame, err = translateDepartureBoardToFrameWithServiceDetails(model.StationCRS+"Departures", board)
 				if err != nil {
@@ -159,7 +158,6 @@ func (ds *DepatureBoardIODataSource) QueryData(ctx context.Context, req *backend
 		}
 
 		if model.Arrivals {
-			frame := &data.Frame{}
 			board, err := ds.DepartureBoardIOClient.GetArrivalsByCRS(model.StationCRS, boardOptions)
 			if err != nil {
 				dr.Error = err
