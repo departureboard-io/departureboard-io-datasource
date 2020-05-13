@@ -16,34 +16,22 @@ type Client struct {
 	APIKey      string
 }
 
-type CallingPointKind int
-
-const (
-	// CallingPointOrigin is the first calling point for a TrainService and is detailed in the TrainService structure itself.
-	CallingPointOrigin = iota
-	// CallingPointDestination is the last calling point for a TrainService and is detailed in the TrainService structure itself.
-	CallingPointDestination
-	// CallingPointPrevious is a calling point included in the response to a request when boardOptions.ServiceDetails is true.
-	CallingPointPrevious
-)
-
-// CallingPoint is a location which the train service stops at.
-type CallingPoint struct {
-	// CallingPointKind is not included in the JSON response but can be used to distinguish between the different kinds of CallingPoint fields.
-	// TODO: implement unmarshalJSON interface so that this field is correctly set.
-	CallingPointKind CallingPointKind
+// BaseCallingPoint models the common structure in all calling points returned by the departureboard.io API.
+type BaseCallingPoint struct {
 	// Location name associated calling point.
 	LocationName string `json:"locationName,omitempty"`
 	// CRS is the Computer Reservation System, three letter name for the calling point.
 	CRS string `json:"crs"`
+}
+
+// PreviousSubsequentCallingPoint has extra fields that are only present in previous or subsequent calling points
+// and not in the origin or destination calling points where that information is part of the train service.
+type PreviousSubsequentCallingPoint struct {
+	BaseCallingPoint
 	// ST is the Scheduled Time that a service is to be at the calling point.
-	// It is only present in a CallingPoint included in the PreviousCallingPoints array and is not included for origin or destination calling points.
-	// For origin and destination CallingPoint, use the TrainService STA or STD.
 	ST string `json:"st"`
 	// ET is the Estimated Time that a service is to be at a calling point.
 	// If the ET is equal to the ST, then the ET 'On time', otherwise it is a 24 hour time as a string.
-	// It is only present in a CallingPoint included in the PreviousCallingPoints array and is not included for origin or destination calling points.
-	// For origin and destination CallingPoint, use the TrainService ETA or ETD.
 	ET string `json:"et"`
 }
 
@@ -87,9 +75,9 @@ type TrainService struct {
 	// ETA is the Estimated Time of Departure. If the ETD is equal to the STD, then the ETD is 'On time', otherwise it is a 24 hour time as a string. Only present in departure boards.
 	ETD string `json:"etd,omitempty"`
 	// Origin is an array of calling points I think it is only ever one element long and contains the stop from which the train started its journey.
-	Origin []CallingPoint `json:"origin,omitempty"`
+	Origin []BaseCallingPoint `json:"origin,omitempty"`
 	// Destination is an array of calling points but I think it is only ever one element long and contains the stop from which the train will end its journey.
-	Destination []CallingPoint `json:"destination,omitempty"`
+	Destination []BaseCallingPoint `json:"destination,omitempty"`
 	// Platform is the platform on which the train will stop at for the queried station.
 	Platform string `json:"platform,omitempty"`
 	// PreviousCallingPointsList is an array of one element 'previousCallingPoints'.
@@ -103,11 +91,11 @@ type TrainService struct {
 
 type SubsequentCallingPointsListElement struct {
 	// SubsequentCallingPoints contains all future calling points.
-	SubsequentCallingPoints []CallingPoint `json:"subsequentCallingPoints,omitempty"`
+	SubsequentCallingPoints []PreviousSubsequentCallingPoint `json:"subsequentCallingPoints,omitempty"`
 }
 type PreviousCallingPointsListElement struct {
 	// PreviousCallingPoints contains all scheduled calling points in order from origin to destination including the origin and destination themselves.
-	PreviousCallingPoints []CallingPoint `json:"previousCallingPoints,omitempty"`
+	PreviousCallingPoints []PreviousSubsequentCallingPoint `json:"previousCallingPoints,omitempty"`
 }
 
 // boardOptions are query parameters that can be set on requests for station arrival or departure boards.
