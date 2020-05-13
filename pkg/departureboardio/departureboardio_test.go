@@ -25,7 +25,7 @@ func TestDepartureBoardIO_GetDeparturesByCRS(t *testing.T) {
 		name    string
 		fields  fields
 		args    args
-		want    *Board
+		want    *DepartureBoard
 		wantErr bool
 	}{
 		{
@@ -42,7 +42,7 @@ func TestDepartureBoardIO_GetDeparturesByCRS(t *testing.T) {
 				crs:     "PAD",
 				options: NewDefaultBoardOptions(),
 			},
-			&Board{},
+			&DepartureBoard{},
 			false,
 		},
 	}

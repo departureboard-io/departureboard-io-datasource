@@ -35,45 +35,18 @@ type PreviousSubsequentCallingPoint struct {
 	ET string `json:"et"`
 }
 
-type BoardKind int
-
-const (
-	// BoardKindArrival is the board returned by a request for arrivals.
-	BoardKindArrival = iota
-	// BoardKindDeparture is the board returned by a request for departures.
-	BoardKindDeparture
-)
-
-// Board models the useful elements of a departureboard.io response to a query for departure or arrival boards.
-type Board struct {
-	// BoardKind is not included in the JSON response but can be used to distinguish between the different kinds board responses.
-	// TODO: implement unmarshalJSON interface so that this field is correctly set.
-	BoardKind     BoardKind
-	TrainServices []TrainService `json:"trainServices,omitempty"`
+// DepartureBoard models the useful elements of a departureboard.io response to a query for departure board.
+type DepartureBoard struct {
+	TrainServices []DepartureTrainService `json:"trainServices,omitempty"`
 }
 
-type TrainServiceKind int
+// ArrivalBoard models the useful elements of a departureboard.io response to a query for arrival board.
+type ArrivalBoard struct {
+	TrainServices []ArrivalTrainService `json:"trainServices,omitempty"`
+}
 
-const (
-	// TrainServiceKindArrival is the TrainService returned by a request for arrivals.
-	TrainServiceKindArrival = iota
-	// TrainServiceKindDeparture is the TrainService returned by a request for departures.
-	TrainServiceKindDeparture
-)
-
-// TrainService is a model of a National Rail train service.
-type TrainService struct {
-	// TrainServiceKind is not included in the JSON response but can be used to distinguish between the different kinds of TrainService.
-	// TODO: implement unmarshalJSON interface so that this field is correctly set.
-	TrainServiceKind TrainServiceKind
-	// STA is the Scheduled Time of Arrival. It is a 24 hour time as a string. Only present in arrival boards.
-	STA string `json:"sta,omitempty"`
-	// ETA is the Estimated Time of Arrival. If the ETA is equal to the STA, then the ETA is 'On time', otherwise it is a 24 hour time as a string. Only present in arrival boards.
-	ETA string `json:"eta,omitempty"`
-	// STD is the Scheduled Time of Departure. It is a 24 hour time as a string. Only present in departure boards.
-	STD string `json:"std,omitempty"`
-	// ETA is the Estimated Time of Departure. If the ETD is equal to the STD, then the ETD is 'On time', otherwise it is a 24 hour time as a string. Only present in departure boards.
-	ETD string `json:"etd,omitempty"`
+// BaseTrainService models the common structure of the train services returned by the departureboard.io API.
+type BaseTrainService struct {
 	// Origin is an array of calling points I think it is only ever one element long and contains the stop from which the train started its journey.
 	Origin []BaseCallingPoint `json:"origin,omitempty"`
 	// Destination is an array of calling points but I think it is only ever one element long and contains the stop from which the train will end its journey.
@@ -87,6 +60,24 @@ type TrainService struct {
 	// Usually this array is only one element long but can be longer if a service splits.
 	// It is only present on departure boards.
 	SubsequentCallingPointsList []SubsequentCallingPointsListElement `json:"subsequentCallingPointsList,omitempty"`
+}
+
+// DepartureTrainService is a model of a National Rail train service on a departure board.
+type DepartureTrainService struct {
+	BaseTrainService
+	// STD is the Scheduled Time of Departure. It is a 24 hour time as a string.
+	STD string `json:"std,omitempty"`
+	// ETA is the Estimated Time of Departure. If the ETD is equal to the STD, then the ETD is 'On time', otherwise it is a 24 hour time as a string.
+	ETD string `json:"etd,omitempty"`
+}
+
+// ArrivalTrainService is a model of a National Rail train service on a arrival board.
+type ArrivalTrainService struct {
+	BaseTrainService
+	// STA is the Scheduled Time of Arrival. It is a 24 hour time as a string.
+	STA string `json:"sta,omitempty"`
+	// ETA is the Estimated Time of Arrival. If the ETA is equal to the STA, then the ETA is 'On time', otherwise it is a 24 hour time as a string.
+	ETA string `json:"eta,omitempty"`
 }
 
 type SubsequentCallingPointsListElement struct {
@@ -141,7 +132,7 @@ func NewDefaultBoardOptions() boardOptions {
 }
 
 // getByCRS consolidates the query flow for requests to the getArrivalsByCRS and getDeparturesByCRS endpoints.
-func (c *Client) getByCRS(endpoint, crs string, options boardOptions) (*Board, error) {
+func (c *Client) getByCRS(endpoint, crs string, options boardOptions) ([]byte, error) {
 	v := url.Values{}
 	v.Set("apiKey", c.APIKey)
 	v.Set("numServices", strconv.Itoa(options.NumServices))
@@ -175,7 +166,17 @@ func (c *Client) getByCRS(endpoint, crs string, options boardOptions) (*Board, e
 		return nil, errors.New("unexpected error from server")
 	}
 
-	board := &Board{}
+	return body, nil
+}
+
+// GetArrivalsByCRS returns a Board of the results from the getDeparturesByCRS endpoint.
+func (c *Client) GetArrivalsByCRS(crs string, options boardOptions) (*ArrivalBoard, error) {
+	body, err := c.getByCRS("getArrivalsByCRS", crs, options)
+	if err != nil {
+		return nil, err
+	}
+
+	board := &ArrivalBoard{}
 	if err := json.Unmarshal(body, board); err != nil {
 		return nil, err
 	}
@@ -183,12 +184,17 @@ func (c *Client) getByCRS(endpoint, crs string, options boardOptions) (*Board, e
 	return board, nil
 }
 
-// GetArrivalsByCRS returns a Board of the results from the getDeparturesByCRS endpoint.
-func (c *Client) GetArrivalsByCRS(crs string, options boardOptions) (*Board, error) {
-	return c.getByCRS("getArrivalsByCRS", crs, options)
-}
-
 // GetDeparturesByCRS returns a Board of the results from the getDeparturesByCRS endpoint.
-func (c *Client) GetDeparturesByCRS(crs string, options boardOptions) (*Board, error) {
-	return c.getByCRS("getDeparturesByCRS", crs, options)
+func (c *Client) GetDeparturesByCRS(crs string, options boardOptions) (*DepartureBoard, error) {
+	body, err := c.getByCRS("getDeparturesByCRS", crs, options)
+	if err != nil {
+		return nil, err
+	}
+
+	board := &DepartureBoard{}
+	if err := json.Unmarshal(body, board); err != nil {
+		return nil, err
+	}
+
+	return board, nil
 }

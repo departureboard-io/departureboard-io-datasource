@@ -201,7 +201,7 @@ func translateTimeRangeToTimeWindowAndOffset(currentTime time.Time, timeRange ba
 	return timeWindow, timeOffset, nil
 }
 
-func translateDepartureBoardToFrameWithServiceDetails(name string, board *departureboardio.Board) (*data.Frame, error) {
+func translateDepartureBoardToFrameWithServiceDetails(name string, board *departureboardio.DepartureBoard) (*data.Frame, error) {
 	var destinations, platforms, std, etd, serviceDetails []string
 	for _, service := range board.TrainServices {
 		std = append(std, service.STD)
@@ -233,7 +233,7 @@ func translateDepartureBoardToFrameWithServiceDetails(name string, board *depart
 
 // translateDepartureBoardToFrame converts a departure board to a data frame.
 // TODO: Make a generic board to frame translation.
-func translateDepartureBoardToFrame(name string, board *departureboardio.Board) (*data.Frame, error) {
+func translateDepartureBoardToFrame(name string, board *departureboardio.DepartureBoard) (*data.Frame, error) {
 	var destinations, platforms, std, etd []string
 	for _, service := range board.TrainServices {
 		std = append(std, service.STD)
@@ -251,7 +251,7 @@ func translateDepartureBoardToFrame(name string, board *departureboardio.Board) 
 
 // translateArrivalBoardToFrame converts a departure board to a data frame.
 // TODO: Make a generic board to frame translation.
-func translateArrivalBoardToFrame(name string, board *departureboardio.Board) (*data.Frame, error) {
+func translateArrivalBoardToFrame(name string, board *departureboardio.ArrivalBoard) (*data.Frame, error) {
 	var origins, platforms, sta, eta []string
 	for _, service := range board.TrainServices {
 		sta = append(sta, service.STA)
@@ -267,7 +267,7 @@ func translateArrivalBoardToFrame(name string, board *departureboardio.Board) (*
 	), nil
 }
 
-func translateArrivalBoardToFrameWithServiceDetails(name string, board *departureboardio.Board) (*data.Frame, error) {
+func translateArrivalBoardToFrameWithServiceDetails(name string, board *departureboardio.ArrivalBoard) (*data.Frame, error) {
 	var origins, platforms, sta, eta, serviceDetails []string
 	for _, service := range board.TrainServices {
 		sta = append(sta, service.STA)
