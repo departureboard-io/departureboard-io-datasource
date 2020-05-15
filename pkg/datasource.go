@@ -119,8 +119,7 @@ func (ds *DepartureBoardIODataSource) QueryData(ctx context.Context, req *backen
 		}
 		timeWindow, timeOffset, err := translateTimeRangeToTimeWindowAndOffset(time.Now(), q.TimeRange)
 		if err != nil {
-			dr.Error = err
-			return res, nil
+			return res, err
 		}
 		boardOptions.TimeWindow = timeWindow
 		boardOptions.TimeOffset = timeOffset

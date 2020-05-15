@@ -106,6 +106,7 @@ type FakeClient struct {
 	Departures  map[string][]DepartureTrainService
 }
 
+// reverseString reverses the runes in a string.
 func reverseString(s string) string {
 	runes := []rune(s)
 	for i, j := 0, len(runes)-1; i < j; i, j = i+1, j-1 {
@@ -123,8 +124,8 @@ func NewFakeClient(crsCodes []string) *FakeClient {
 			{
 				BaseTrainService: BaseTrainService{
 					Platform:    "12A",
-					Destination: []BaseCallingPoint{{LocationName: crs}},
-					Origin:      []BaseCallingPoint{{LocationName: reverseString(crs)}},
+					Origin:      []BaseCallingPoint{{LocationName: crs}},
+					Destination: []BaseCallingPoint{{LocationName: reverseString(crs)}},
 				},
 				STD: "13:10",
 				ETD: "On time",
@@ -147,8 +148,8 @@ func NewFakeClient(crsCodes []string) *FakeClient {
 			{
 				BaseTrainService: BaseTrainService{
 					Platform:    "12A",
-					Origin:      []BaseCallingPoint{{LocationName: crs}},
-					Destination: []BaseCallingPoint{{LocationName: reverseString(crs)}},
+					Origin:      []BaseCallingPoint{{LocationName: reverseString(crs)}},
+					Destination: []BaseCallingPoint{{LocationName: crs}},
 				},
 				STA: "13:10",
 				ETA: "On time",
