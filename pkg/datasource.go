@@ -19,8 +19,8 @@ import (
 
 const metricNamespace = "departureboard_io_datasource"
 
-// DepatureBoardIODataSource handler for departureboard.io API.
-type DepatureBoardIODataSource struct {
+// DepartureBoardIODataSource handler for departureboard.io API.
+type DepartureBoardIODataSource struct {
 	DepartureBoardIOClient *departureboardio.Client
 }
 
@@ -34,7 +34,7 @@ type DepartureBoardIOQuery struct {
 }
 
 // NewDataSource creates the departureboard.io datasource
-func NewDataSource(mux *http.ServeMux) *DepatureBoardIODataSource {
+func NewDataSource(mux *http.ServeMux) *DepartureBoardIODataSource {
 	queriesTotal := prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Name:      "data_query_total",
@@ -44,7 +44,7 @@ func NewDataSource(mux *http.ServeMux) *DepatureBoardIODataSource {
 		[]string{"scenario"},
 	)
 
-	ds := &DepatureBoardIODataSource{
+	ds := &DepartureBoardIODataSource{
 		DepartureBoardIOClient: &departureboardio.Client{
 			Client: http.Client{},
 		},
@@ -55,7 +55,7 @@ func NewDataSource(mux *http.ServeMux) *DepatureBoardIODataSource {
 }
 
 // CheckHealth checks if the plugin is running properly
-func (ds *DepatureBoardIODataSource) CheckHealth(ctx context.Context, req *backend.CheckHealthRequest) (*backend.CheckHealthResult, error) {
+func (ds *DepartureBoardIODataSource) CheckHealth(ctx context.Context, req *backend.CheckHealthRequest) (*backend.CheckHealthResult, error) {
 	res := &backend.CheckHealthResult{}
 
 	// Just checking that the plugin exe is alive and running
@@ -93,7 +93,7 @@ func (ds *DepatureBoardIODataSource) CheckHealth(ctx context.Context, req *backe
 }
 
 // QueryData queries for data.
-func (ds *DepatureBoardIODataSource) QueryData(ctx context.Context, req *backend.QueryDataRequest) (*backend.QueryDataResponse, error) {
+func (ds *DepartureBoardIODataSource) QueryData(ctx context.Context, req *backend.QueryDataRequest) (*backend.QueryDataResponse, error) {
 	res := backend.NewQueryDataResponse()
 
 	if ds.DepartureBoardIOClient.APIKey == "" {
