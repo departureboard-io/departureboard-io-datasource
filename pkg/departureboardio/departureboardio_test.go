@@ -4,7 +4,6 @@ package departureboardio
 
 import (
 	"net/http"
-	"net/url"
 	"os"
 	"testing"
 )
@@ -13,13 +12,13 @@ import (
 // It mostly just validates that the right URL is requested.
 func TestDepartureBoardIO_GetDeparturesByCRS(t *testing.T) {
 	type fields struct {
-		Client      http.Client
-		APIEndpoint url.URL
-		APIKey      string
+		Client http.Client
 	}
 	type args struct {
-		crs     string
-		options boardOptions
+		apiEndpoint string
+		apiKey      string
+		crs         string
+		options     boardOptions
 	}
 	tests := []struct {
 		name    string
@@ -32,15 +31,12 @@ func TestDepartureBoardIO_GetDeparturesByCRS(t *testing.T) {
 			"PAD",
 			fields{
 				Client: http.Client{},
-				APIEndpoint: func() url.URL {
-					parsed, _ := url.Parse("https://api.departureboard.io/api/v2.0")
-					return *parsed
-				}(),
-				APIKey: os.Getenv("NATIONALRAIL_API_KEY"),
 			},
 			args{
-				crs:     "PAD",
-				options: NewDefaultBoardOptions(),
+				apiEndpoint: "https://api.departureboard.io/api/v2.0",
+				apiKey:      os.Getenv("NATIONALRAIL_API_KEY"),
+				crs:         "PAD",
+				options:     NewDefaultBoardOptions(),
 			},
 			&DepartureBoard{},
 			false,
@@ -49,11 +45,9 @@ func TestDepartureBoardIO_GetDeparturesByCRS(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			c := &Client{
-				Client:      tt.fields.Client,
-				APIEndpoint: tt.fields.APIEndpoint,
-				APIKey:      tt.fields.APIKey,
+				Client: tt.fields.Client,
 			}
-			got, err := c.GetDeparturesByCRS(tt.args.crs, tt.args.options)
+			got, err := c.GetDeparturesByCRS(tt.args.apiEndpoint, tt.args.apiKey, tt.args.crs, tt.args.options)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("DepartureBoardIO.GetDeparturesByCRS() error = %v, wantErr %v", err, tt.wantErr)
 				return

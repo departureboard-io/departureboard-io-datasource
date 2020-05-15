@@ -11,33 +11,26 @@ import (
 )
 
 type DepartureBoardIOClient interface {
-	GetDeparturesByCRS(crs string, boardOptions boardOptions) (*DepartureBoard, error)
-	GetArrivalsByCRS(crs string, boardOptions boardOptions) (*ArrivalBoard, error)
+	GetDeparturesByCRS(apiEndpoint, apiKey, crs string, boardOptions boardOptions) (*DepartureBoard, error)
+	GetArrivalsByCRS(apiEndpoint, apiKey, crs string, boardOptions boardOptions) (*ArrivalBoard, error)
 }
 
 // Client implements the DepartureBoardIOClient interface by making HTTP requests of the api.departureboard.io JSON API.
 type Client struct {
-	Client      http.Client
-	APIEndpoint url.URL
-	APIKey      string
+	Client http.Client
 }
 
 func NewClient(apiEndpoint, apiKey string) (client Client, err error) {
-	apiURL, err := url.Parse(apiEndpoint)
 	if err != nil {
 		return client, err
 	}
-	return Client{
-		Client:      http.Client{},
-		APIEndpoint: *apiURL,
-		APIKey:      apiKey,
-	}, nil
+	return Client{Client: http.Client{}}, nil
 }
 
 // getByCRS consolidates the query flow for requests to the getArrivalsByCRS and getDeparturesByCRS endpoints.
-func (c *Client) getByCRS(endpoint, crs string, options boardOptions) ([]byte, error) {
+func (c *Client) getByCRS(apiEndpoint, apiKey, queryEndpoint, crs string, options boardOptions) ([]byte, error) {
 	v := url.Values{}
-	v.Set("apiKey", c.APIKey)
+	v.Set("apiKey", apiKey)
 	v.Set("numServices", strconv.Itoa(options.NumServices))
 	v.Set("timeOffset", strconv.Itoa(options.TimeOffset))
 	v.Set("timeWindow", strconv.Itoa(options.TimeWindow))
@@ -46,8 +39,11 @@ func (c *Client) getByCRS(endpoint, crs string, options boardOptions) ([]byte, e
 		v.Set("filterStation", *options.FilterStation)
 	}
 
-	requestURL := c.APIEndpoint
-	requestURL.Path = requestURL.Path + "/" + endpoint + "/" + crs
+	requestURL, err := url.Parse(apiEndpoint)
+	if err != nil {
+		return nil, fmt.Errorf("unable to parse api endpoint as URL: %v", err)
+	}
+	requestURL.Path = requestURL.Path + "/" + queryEndpoint + "/" + crs
 	requestURL.RawQuery = v.Encode()
 
 	req, err := http.NewRequest("GET", requestURL.String(), nil)
@@ -73,8 +69,8 @@ func (c *Client) getByCRS(endpoint, crs string, options boardOptions) ([]byte, e
 }
 
 // GetArrivalsByCRS returns a Board of the results from the getDeparturesByCRS endpoint.
-func (c *Client) GetArrivalsByCRS(crs string, options boardOptions) (*ArrivalBoard, error) {
-	body, err := c.getByCRS("getArrivalsByCRS", crs, options)
+func (c Client) GetArrivalsByCRS(apiEndpoint, apiKey, crs string, options boardOptions) (*ArrivalBoard, error) {
+	body, err := c.getByCRS(apiEndpoint, apiKey, "getArrivalsByCRS", crs, options)
 	if err != nil {
 		return nil, err
 	}
@@ -88,8 +84,8 @@ func (c *Client) GetArrivalsByCRS(crs string, options boardOptions) (*ArrivalBoa
 }
 
 // GetDeparturesByCRS returns a Board of the results from the getDeparturesByCRS endpoint.
-func (c *Client) GetDeparturesByCRS(crs string, options boardOptions) (*DepartureBoard, error) {
-	body, err := c.getByCRS("getDeparturesByCRS", crs, options)
+func (c Client) GetDeparturesByCRS(apiEndpoint, apiKey, crs string, options boardOptions) (*DepartureBoard, error) {
+	body, err := c.getByCRS(apiEndpoint, apiKey, "getDeparturesByCRS", crs, options)
 	if err != nil {
 		return nil, err
 	}
@@ -104,8 +100,10 @@ func (c *Client) GetDeparturesByCRS(crs string, options boardOptions) (*Departur
 
 // FakeClient is an in memory fake that implements the DepartureBoardIOClient interface.
 type FakeClient struct {
-	Arrivals   map[string][]ArrivalTrainService
-	Departures map[string][]DepartureTrainService
+	APIEndpoint url.URL
+	APIKey      string
+	Arrivals    map[string][]ArrivalTrainService
+	Departures  map[string][]DepartureTrainService
 }
 
 func reverseString(s string) string {
@@ -116,11 +114,10 @@ func reverseString(s string) string {
 	return string(runes)
 }
 
-// NewFakeClient returns a new FakeClient and an array of valid CRS codes that can be used to make queryies of the client.
-func NewFakeClient() (FakeClient, []string) {
+// NewFakeClient returns a new FakeClient with arrivals and departure train services generated for all provided crsCodes.
+func NewFakeClient(crsCodes []string) *FakeClient {
 	departures := make(map[string][]DepartureTrainService)
 	arrivals := make(map[string][]ArrivalTrainService)
-	crsCodes := []string{"PAD", "HAY", "NRW", "CBG"}
 	for _, crs := range crsCodes {
 		departures[crs] = []DepartureTrainService{
 			{
@@ -171,13 +168,13 @@ func NewFakeClient() (FakeClient, []string) {
 			},
 		}
 	}
-	return FakeClient{
+	return &FakeClient{
 		Departures: departures,
 		Arrivals:   arrivals,
-	}, crsCodes
+	}
 }
 
-func (fc *FakeClient) GetDeparturesByCRS(crs string, boardOptions boardOptions) (*DepartureBoard, error) {
+func (fc FakeClient) GetDeparturesByCRS(apiKey, apiEndpoint, crs string, boardOptions boardOptions) (*DepartureBoard, error) {
 	trainServices, ok := fc.Departures[crs]
 	if !ok {
 		return nil, fmt.Errorf("crs does not exist: %s", crs)
@@ -187,7 +184,7 @@ func (fc *FakeClient) GetDeparturesByCRS(crs string, boardOptions boardOptions) 
 	}, nil
 }
 
-func (fc *FakeClient) GetArrivalsByCRS(crs string, boardOptions boardOptions) (*ArrivalBoard, error) {
+func (fc FakeClient) GetArrivalsByCRS(apiKey, apiEndpoint, crs string, boardOptions boardOptions) (*ArrivalBoard, error) {
 	trainServices, ok := fc.Arrivals[crs]
 	if !ok {
 		return nil, fmt.Errorf("crs does not exist: %s", crs)

@@ -6,7 +6,6 @@ import (
 	"errors"
 	"math"
 	"net/http"
-	"net/url"
 	"strings"
 	"time"
 
@@ -21,7 +20,9 @@ const metricNamespace = "departureboard_io_datasource"
 
 // DepartureBoardIODataSource handler for departureboard.io API.
 type DepartureBoardIODataSource struct {
-	DepartureBoardIOClient *departureboardio.Client
+	DepartureBoardIOClient departureboardio.DepartureBoardIOClient
+	APIKey                 string
+	APIEndpoint            string
 }
 
 // DepartureBoardIOQuery models the query we get from the frontend.
@@ -72,20 +73,14 @@ func (ds *DepartureBoardIODataSource) CheckHealth(ctx context.Context, req *back
 		return res, nil
 	}
 
-	apiEndpoint, err := url.Parse(settings.APIEndpoint)
-	if err != nil {
-		res.Status = backend.HealthStatusError
-		res.Message = "Invalid API endpoint"
-	}
-
-	ds.DepartureBoardIOClient.APIEndpoint = *apiEndpoint
-	ds.DepartureBoardIOClient.APIKey = settings.APIKey
-
-	if _, err := ds.DepartureBoardIOClient.GetDeparturesByCRS("PAD", departureboardio.NewDefaultBoardOptions()); err != nil {
+	if _, err := ds.DepartureBoardIOClient.GetDeparturesByCRS(settings.APIEndpoint, settings.APIKey, "PAD", departureboardio.NewDefaultBoardOptions()); err != nil {
 		res.Status = backend.HealthStatusError
 		res.Message = "Error making request to server"
 		return res, nil
 	}
+
+	ds.APIEndpoint = settings.APIEndpoint
+	ds.APIKey = settings.APIKey
 
 	res.Status = backend.HealthStatusOk
 	res.Message = "Success"
@@ -96,19 +91,16 @@ func (ds *DepartureBoardIODataSource) CheckHealth(ctx context.Context, req *back
 func (ds *DepartureBoardIODataSource) QueryData(ctx context.Context, req *backend.QueryDataRequest) (*backend.QueryDataResponse, error) {
 	res := backend.NewQueryDataResponse()
 
-	if ds.DepartureBoardIOClient.APIKey == "" {
-		settings, err := LoadSettings(req.PluginContext)
-		if err != nil {
-			return res, errors.New("Unable to load datasource configuration")
+	switch ds.DepartureBoardIOClient.(type) {
+	case departureboardio.Client:
+		if ds.APIKey == "" {
+			settings, err := LoadSettings(req.PluginContext)
+			if err != nil {
+				return res, errors.New("Unable to load datasource configuration")
+			}
+			ds.APIEndpoint = settings.APIEndpoint
+			ds.APIKey = settings.APIKey
 		}
-
-		apiEndpoint, err := url.Parse(settings.APIEndpoint)
-		if err != nil {
-			return res, errors.New("Unable to load datasource configuration")
-		}
-
-		ds.DepartureBoardIOClient.APIEndpoint = *apiEndpoint
-		ds.DepartureBoardIOClient.APIKey = settings.APIKey
 	}
 
 	for _, q := range req.Queries {
@@ -136,7 +128,7 @@ func (ds *DepartureBoardIODataSource) QueryData(ctx context.Context, req *backen
 		var frame *data.Frame
 		// TODO: is returning multiple frames okay?
 		if model.Departures {
-			board, err := ds.DepartureBoardIOClient.GetDeparturesByCRS(model.StationCRS, boardOptions)
+			board, err := ds.DepartureBoardIOClient.GetDeparturesByCRS(ds.APIEndpoint, ds.APIKey, model.StationCRS, boardOptions)
 			if err != nil {
 				dr.Error = err
 				return res, nil
@@ -158,7 +150,7 @@ func (ds *DepartureBoardIODataSource) QueryData(ctx context.Context, req *backen
 		}
 
 		if model.Arrivals {
-			board, err := ds.DepartureBoardIOClient.GetArrivalsByCRS(model.StationCRS, boardOptions)
+			board, err := ds.DepartureBoardIOClient.GetArrivalsByCRS(ds.APIEndpoint, ds.APIKey, model.StationCRS, boardOptions)
 			if err != nil {
 				dr.Error = err
 				return res, nil

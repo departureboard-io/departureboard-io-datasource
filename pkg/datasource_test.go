@@ -1,9 +1,12 @@
 package main
 
 import (
+	"context"
+	"reflect"
 	"testing"
 	"time"
 
+	"github.com/departureboard-io/departureboard-io-datasource/pkg/departureboardio"
 	"github.com/grafana/grafana-plugin-sdk-go/backend"
 )
 
@@ -77,6 +80,47 @@ func Test_translateTimeRangeToTimeWindowAndOffset(t *testing.T) {
 			}
 			if gotTimeOffset != tt.wantTimeOffset {
 				t.Errorf("translateTimeRangeToTimeWindowAndOffset() gotTimeOffset = %v, want %v", gotTimeOffset, tt.wantTimeOffset)
+			}
+		})
+	}
+}
+
+func TestDepartureBoardIODataSource_QueryData(t *testing.T) {
+	crsCodes := []string{"PAD", "HAY", "NRW", "CBG"}
+	type fields struct {
+		DepartureBoardIOClient departureboardio.DepartureBoardIOClient
+	}
+	type args struct {
+		ctx context.Context
+		req *backend.QueryDataRequest
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		want    *backend.QueryDataResponse
+		wantErr bool
+	}{
+		{
+			"no queries",
+			fields{departureboardio.NewFakeClient(crsCodes)},
+			args{context.Background(), &backend.QueryDataRequest{}},
+			&backend.QueryDataResponse{backend.Responses{}},
+			false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ds := &DepartureBoardIODataSource{
+				DepartureBoardIOClient: tt.fields.DepartureBoardIOClient,
+			}
+			got, err := ds.QueryData(tt.args.ctx, tt.args.req)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("DepartureBoardIODataSource.QueryData() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("DepartureBoardIODataSource.QueryData() = %v, want %v", got, tt.want)
 			}
 		})
 	}
