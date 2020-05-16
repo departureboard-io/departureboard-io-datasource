@@ -18,7 +18,7 @@ func TestDepartureBoardIO_GetDeparturesByCRS(t *testing.T) {
 		apiEndpoint string
 		apiKey      string
 		crs         string
-		options     boardOptions
+		options     BoardOptions
 	}
 	tests := []struct {
 		name    string

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"encoding/json"
 	"testing"
 	"time"
@@ -87,190 +86,161 @@ func Test_translateTimeRangeToTimeWindowAndOffset(t *testing.T) {
 	}
 }
 
-func TestDepartureBoardIODataSource_QueryData(t *testing.T) {
+func TestDepartureBoardIODataSource_handleQuery(t *testing.T) {
 	crsCodes := []string{"PAD", "HAY", "NRW", "CBG"}
 	type fields struct {
 		DepartureBoardIOClient departureboardio.DepartureBoardIOClient
 	}
 	type args struct {
-		ctx context.Context
-		req *backend.QueryDataRequest
+		settings DataSourceSettings
+		query    backend.DataQuery
 	}
 	tests := []struct {
-		name    string
-		fields  fields
-		args    args
-		want    *backend.QueryDataResponse
-		wantErr bool
+		name   string
+		fields fields
+		args   args
+		want   backend.DataResponse
 	}{
-		{
-			"no queries should return no responses",
-			fields{departureboardio.NewFakeClient(crsCodes)},
-			args{context.Background(), &backend.QueryDataRequest{}},
-			&backend.QueryDataResponse{Responses: backend.Responses{}},
-			false,
-		},
 		{
 			"query for departures without service details",
 			fields{departureboardio.NewFakeClient(crsCodes)},
-			args{context.Background(), &backend.QueryDataRequest{
-				Queries: []backend.DataQuery{{
+			args{
+				DataSourceSettings{}, backend.DataQuery{
 					RefID:     "qfdwosd",
 					QueryType: "",
-					TimeRange: backend.TimeRange{
-						From: time.Now(),
-						To:   time.Now().Add(time.Hour),
-					},
 					JSON: func() []byte {
 						b, err := json.Marshal(DepartureBoardIOQuery{
-							StationCRS:     crsCodes[0],
-							Arrivals:       false,
-							Departures:     true,
-							FilterCRS:      "",
-							ServiceDetails: false,
+							StationCRS:      crsCodes[0],
+							Arrivals:        false,
+							Departures:      true,
+							FilterCRS:       "",
+							ServiceDetails:  false,
+							IgnoreTimeRange: true,
 						})
 						if err != nil {
 							panic(err)
 						}
 						return b
 					}(),
-				}},
-			}},
-			&backend.QueryDataResponse{Responses: backend.Responses{
-				"qfdwosd": backend.DataResponse{
-					Frames: data.Frames{
-						data.NewFrame("PADDepartures",
-							data.NewField("Scheduled", data.Labels{}, []string{"13:10"}),
-							data.NewField("Estimated", data.Labels{}, []string{"On time"}),
-							data.NewField("Destination", data.Labels{}, []string{"DAP"}),
-							data.NewField("Platform", data.Labels{}, []string{"12A"}),
-						)},
-					Error: nil,
 				},
-			}},
-			false,
+			},
+			backend.DataResponse{
+				Frames: data.Frames{
+					data.NewFrame("PADDepartures",
+						data.NewField("Scheduled", data.Labels{}, []string{"13:10"}),
+						data.NewField("Estimated", data.Labels{}, []string{"On time"}),
+						data.NewField("Destination", data.Labels{}, []string{"DAP"}),
+						data.NewField("Platform", data.Labels{}, []string{"12A"}),
+					)},
+				Error: nil,
+			},
 		},
 		{
 			"query for departures with service details",
 			fields{departureboardio.NewFakeClient(crsCodes)},
-			args{context.Background(), &backend.QueryDataRequest{
-				Queries: []backend.DataQuery{{
+			args{
+				DataSourceSettings{},
+				backend.DataQuery{
 					RefID:     "qfdwsd",
 					QueryType: "",
-					TimeRange: backend.TimeRange{
-						From: time.Now(),
-						To:   time.Now().Add(time.Hour),
-					},
 					JSON: func() []byte {
 						b, err := json.Marshal(DepartureBoardIOQuery{
-							StationCRS:     crsCodes[0],
-							Arrivals:       false,
-							Departures:     true,
-							FilterCRS:      "",
-							ServiceDetails: true,
+							StationCRS:      crsCodes[0],
+							Arrivals:        false,
+							Departures:      true,
+							FilterCRS:       "",
+							ServiceDetails:  true,
+							IgnoreTimeRange: true,
 						})
 						if err != nil {
 							panic(err)
 						}
 						return b
 					}(),
-				}},
-			}},
-			&backend.QueryDataResponse{Responses: backend.Responses{
-				"qfdwsd": backend.DataResponse{
-					Frames: data.Frames{
-						data.NewFrame("PADDepartures",
-							data.NewField("Scheduled", data.Labels{}, []string{"13:10"}),
-							data.NewField("Estimated", data.Labels{}, []string{"On time"}),
-							data.NewField("Destination", data.Labels{}, []string{"DAP"}),
-							data.NewField("Platform", data.Labels{}, []string{"12A"}),
-							data.NewField("Service Details", data.Labels{}, []string{"PAD"}),
-						)},
-					Error: nil,
 				},
-			}},
-			false,
+			},
+			backend.DataResponse{
+				Frames: data.Frames{
+					data.NewFrame("PADDepartures",
+						data.NewField("Scheduled", data.Labels{}, []string{"13:10"}),
+						data.NewField("Estimated", data.Labels{}, []string{"On time"}),
+						data.NewField("Destination", data.Labels{}, []string{"DAP"}),
+						data.NewField("Platform", data.Labels{}, []string{"12A"}),
+						data.NewField("Service Details", data.Labels{}, []string{"PAD"}),
+					)},
+				Error: nil,
+			},
 		},
 		{
 			"query for arrivals without service details",
 			fields{departureboardio.NewFakeClient(crsCodes)},
-			args{context.Background(), &backend.QueryDataRequest{
-				Queries: []backend.DataQuery{{
+			args{
+				DataSourceSettings{},
+				backend.DataQuery{
 					RefID:     "qfawosd",
 					QueryType: "",
-					TimeRange: backend.TimeRange{
-						From: time.Now(),
-						To:   time.Now().Add(time.Hour),
-					},
 					JSON: func() []byte {
 						b, err := json.Marshal(DepartureBoardIOQuery{
-							StationCRS:     crsCodes[0],
-							Arrivals:       true,
-							Departures:     false,
-							FilterCRS:      "",
-							ServiceDetails: false,
+							StationCRS:      crsCodes[0],
+							Arrivals:        true,
+							Departures:      false,
+							FilterCRS:       "",
+							ServiceDetails:  false,
+							IgnoreTimeRange: true,
 						})
 						if err != nil {
 							panic(err)
 						}
 						return b
 					}(),
-				}},
-			}},
-			&backend.QueryDataResponse{Responses: backend.Responses{
-				"qfawosd": backend.DataResponse{
-					Frames: data.Frames{
-						data.NewFrame("PADArrivals",
-							data.NewField("Scheduled", data.Labels{}, []string{"13:10"}),
-							data.NewField("Estimated", data.Labels{}, []string{"On time"}),
-							data.NewField("Origin", data.Labels{}, []string{"DAP"}),
-							data.NewField("Platform", data.Labels{}, []string{"12A"}),
-						)},
-					Error: nil,
 				},
-			}},
-			false,
+			},
+			backend.DataResponse{
+				Frames: data.Frames{
+					data.NewFrame("PADArrivals",
+						data.NewField("Scheduled", data.Labels{}, []string{"13:10"}),
+						data.NewField("Estimated", data.Labels{}, []string{"On time"}),
+						data.NewField("Origin", data.Labels{}, []string{"DAP"}),
+						data.NewField("Platform", data.Labels{}, []string{"12A"}),
+					)},
+				Error: nil,
+			},
 		},
 		{
 			"query for arrivals with service details",
 			fields{departureboardio.NewFakeClient(crsCodes)},
-			args{context.Background(), &backend.QueryDataRequest{
-				Queries: []backend.DataQuery{{
+			args{
+				DataSourceSettings{},
+				backend.DataQuery{
 					RefID:     "qfawsd",
 					QueryType: "",
-					TimeRange: backend.TimeRange{
-						From: time.Now(),
-						To:   time.Now().Add(time.Hour),
-					},
 					JSON: func() []byte {
 						b, err := json.Marshal(DepartureBoardIOQuery{
-							StationCRS:     crsCodes[0],
-							Arrivals:       true,
-							Departures:     false,
-							FilterCRS:      "",
-							ServiceDetails: true,
+							StationCRS:      crsCodes[0],
+							Arrivals:        true,
+							Departures:      false,
+							FilterCRS:       "",
+							ServiceDetails:  true,
+							IgnoreTimeRange: true,
 						})
 						if err != nil {
 							panic(err)
 						}
 						return b
 					}(),
-				}},
-			}},
-			&backend.QueryDataResponse{Responses: backend.Responses{
-				"qfawsd": backend.DataResponse{
-					Frames: data.Frames{
-						data.NewFrame("PADArrivals",
-							data.NewField("Scheduled", data.Labels{}, []string{"13:10"}),
-							data.NewField("Estimated", data.Labels{}, []string{"On time"}),
-							data.NewField("Origin", data.Labels{}, []string{"DAP"}),
-							data.NewField("Platform", data.Labels{}, []string{"12A"}),
-							data.NewField("Service Details", data.Labels{}, []string{"PAD"}),
-						)},
-					Error: nil,
 				},
-			}},
-			false,
+			},
+			backend.DataResponse{
+				Frames: data.Frames{
+					data.NewFrame("PADArrivals",
+						data.NewField("Scheduled", data.Labels{}, []string{"13:10"}),
+						data.NewField("Estimated", data.Labels{}, []string{"On time"}),
+						data.NewField("Origin", data.Labels{}, []string{"DAP"}),
+						data.NewField("Platform", data.Labels{}, []string{"12A"}),
+						data.NewField("Service Details", data.Labels{}, []string{"PAD"}),
+					)},
+				Error: nil,
+			},
 		},
 	}
 	for _, tt := range tests {
@@ -278,11 +248,7 @@ func TestDepartureBoardIODataSource_QueryData(t *testing.T) {
 			ds := &DepartureBoardIODataSource{
 				DepartureBoardIOClient: tt.fields.DepartureBoardIOClient,
 			}
-			got, err := ds.QueryData(tt.args.ctx, tt.args.req)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("DepartureBoardIODataSource.QueryData() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
+			got := ds.handleQuery(tt.args.settings, tt.args.query)
 			if diff := cmp.Diff(tt.want, got, data.FrameTestCompareOptions()...); diff != "" {
 				t.Errorf("DepartureBoardIODataSource.QueryData() mismatch (-want +got):\n%s", diff)
 			}

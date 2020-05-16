@@ -71,8 +71,8 @@ type PreviousCallingPointsListElement struct {
 	PreviousCallingPoints []PreviousSubsequentCallingPoint `json:"previousCallingPoints,omitempty"`
 }
 
-// boardOptions are query parameters that can be set on requests for station arrival or departure boards.
-type boardOptions struct {
+// BoardOptions are query parameters that can be set on requests for station arrival or departure boards.
+type BoardOptions struct {
 	// The number of departing services to return.
 	// This is a maximum value, less may be returned if there is not a sufficient amount of services running from the selected station within the time window specified.
 	NumServices int
@@ -90,10 +90,10 @@ type boardOptions struct {
 	FilterStation *string
 }
 
-// NewBoardOptions returns boardOptions for the provided values. It does not do any validation of its arguments but
+// NewBoardOptions returns BoardOptions for the provided values. It does not do any validation of its arguments but
 // returns an error in case validation is implemented.
-func NewBoardOptions(numServices, timeOffset, timeWindow int, serviceDetails bool, filterStation *string) (boardOptions, error) {
-	return boardOptions{
+func NewBoardOptions(numServices, timeOffset, timeWindow int, serviceDetails bool, filterStation *string) (BoardOptions, error) {
+	return BoardOptions{
 		NumServices:    numServices,
 		TimeOffset:     timeOffset,
 		TimeWindow:     timeWindow,
@@ -103,8 +103,8 @@ func NewBoardOptions(numServices, timeOffset, timeWindow int, serviceDetails boo
 }
 
 // NewDefaultBoardOptions returns sensible default options for a Board query.
-func NewDefaultBoardOptions() boardOptions {
-	return boardOptions{
+func NewDefaultBoardOptions() BoardOptions {
+	return BoardOptions{
 		NumServices:    20,
 		TimeOffset:     20,
 		TimeWindow:     60,

@@ -11,8 +11,8 @@ import (
 )
 
 type DepartureBoardIOClient interface {
-	GetDeparturesByCRS(apiEndpoint, apiKey, crs string, boardOptions boardOptions) (*DepartureBoard, error)
-	GetArrivalsByCRS(apiEndpoint, apiKey, crs string, boardOptions boardOptions) (*ArrivalBoard, error)
+	GetDeparturesByCRS(apiEndpoint, apiKey, crs string, oardOptions BoardOptions) (*DepartureBoard, error)
+	GetArrivalsByCRS(apiEndpoint, apiKey, crs string, boardOptions BoardOptions) (*ArrivalBoard, error)
 }
 
 // Client implements the DepartureBoardIOClient interface by making HTTP requests of the api.departureboard.io JSON API.
@@ -28,7 +28,7 @@ func NewClient(apiEndpoint, apiKey string) (client Client, err error) {
 }
 
 // getByCRS consolidates the query flow for requests to the getArrivalsByCRS and getDeparturesByCRS endpoints.
-func (c *Client) getByCRS(apiEndpoint, apiKey, queryEndpoint, crs string, options boardOptions) ([]byte, error) {
+func (c *Client) getByCRS(apiEndpoint, apiKey, queryEndpoint, crs string, options BoardOptions) ([]byte, error) {
 	v := url.Values{}
 	v.Set("apiKey", apiKey)
 	v.Set("numServices", strconv.Itoa(options.NumServices))
@@ -69,7 +69,7 @@ func (c *Client) getByCRS(apiEndpoint, apiKey, queryEndpoint, crs string, option
 }
 
 // GetArrivalsByCRS returns a Board of the results from the getDeparturesByCRS endpoint.
-func (c Client) GetArrivalsByCRS(apiEndpoint, apiKey, crs string, options boardOptions) (*ArrivalBoard, error) {
+func (c Client) GetArrivalsByCRS(apiEndpoint, apiKey, crs string, options BoardOptions) (*ArrivalBoard, error) {
 	body, err := c.getByCRS(apiEndpoint, apiKey, "getArrivalsByCRS", crs, options)
 	if err != nil {
 		return nil, err
@@ -84,7 +84,7 @@ func (c Client) GetArrivalsByCRS(apiEndpoint, apiKey, crs string, options boardO
 }
 
 // GetDeparturesByCRS returns a Board of the results from the getDeparturesByCRS endpoint.
-func (c Client) GetDeparturesByCRS(apiEndpoint, apiKey, crs string, options boardOptions) (*DepartureBoard, error) {
+func (c Client) GetDeparturesByCRS(apiEndpoint, apiKey, crs string, options BoardOptions) (*DepartureBoard, error) {
 	body, err := c.getByCRS(apiEndpoint, apiKey, "getDeparturesByCRS", crs, options)
 	if err != nil {
 		return nil, err
@@ -175,7 +175,7 @@ func NewFakeClient(crsCodes []string) *FakeClient {
 	}
 }
 
-func (fc FakeClient) GetDeparturesByCRS(apiKey, apiEndpoint, crs string, boardOptions boardOptions) (*DepartureBoard, error) {
+func (fc FakeClient) GetDeparturesByCRS(apiKey, apiEndpoint, crs string, boardOptions BoardOptions) (*DepartureBoard, error) {
 	trainServices, ok := fc.Departures[crs]
 	if !ok {
 		return nil, fmt.Errorf("crs does not exist: %s", crs)
@@ -185,7 +185,7 @@ func (fc FakeClient) GetDeparturesByCRS(apiKey, apiEndpoint, crs string, boardOp
 	}, nil
 }
 
-func (fc FakeClient) GetArrivalsByCRS(apiKey, apiEndpoint, crs string, boardOptions boardOptions) (*ArrivalBoard, error) {
+func (fc FakeClient) GetArrivalsByCRS(apiKey, apiEndpoint, crs string, boardOptions BoardOptions) (*ArrivalBoard, error) {
 	trainServices, ok := fc.Arrivals[crs]
 	if !ok {
 		return nil, fmt.Errorf("crs does not exist: %s", crs)

@@ -7,23 +7,24 @@ import (
 	"github.com/grafana/grafana-plugin-sdk-go/backend"
 )
 
-// DatasourceSettings contains Google Sheets API authentication properties.
-type DatasourceSettings struct {
+// DataSourceSettings are the configurable settings for the departureboard.io data source.
+type DataSourceSettings struct {
 	APIEndpoint string `json:"apiEndpoint"`
 	APIKey      string `json:"apiKey"`
 }
 
-// LoadSettings gets the relevant settings from the plugin context.
-func LoadSettings(ctx backend.PluginContext) (*DatasourceSettings, error) {
-	model := &DatasourceSettings{}
+// LoadSettings gets the DataSourceSettings from the plugin context.
+func LoadSettings(ctx backend.PluginContext) (DataSourceSettings, error) {
+	settings := DataSourceSettings{}
 
-	settings := ctx.DataSourceInstanceSettings
-	err := json.Unmarshal(settings.JSONData, &model)
-	if err != nil {
-		return nil, fmt.Errorf("error reading settings: %s", err.Error())
+	if ctx.DataSourceInstanceSettings == nil {
+		return settings, fmt.Errorf("error reading settings: instance settings are nil")
 	}
+	err := json.Unmarshal(ctx.DataSourceInstanceSettings.JSONData, &settings)
+	if err != nil {
+		return settings, fmt.Errorf("error reading settings: %s", err.Error())
+	}
+	settings.APIKey = ctx.DataSourceInstanceSettings.DecryptedSecureJSONData["apiKey"]
 
-	model.APIKey = settings.DecryptedSecureJSONData["apiKey"]
-
-	return model, nil
+	return settings, nil
 }
