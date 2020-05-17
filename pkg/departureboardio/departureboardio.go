@@ -11,7 +11,7 @@ import (
 )
 
 type DepartureBoardIOClient interface {
-	GetDeparturesByCRS(apiEndpoint, apiKey, crs string, oardOptions BoardOptions) (*DepartureBoard, error)
+	GetDeparturesByCRS(apiEndpoint, apiKey, crs string, boardOptions BoardOptions) (*DepartureBoard, error)
 	GetArrivalsByCRS(apiEndpoint, apiKey, crs string, boardOptions BoardOptions) (*ArrivalBoard, error)
 }
 
